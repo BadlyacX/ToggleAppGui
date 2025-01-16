@@ -2,7 +2,12 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import os
 import google.generativeai as genai
+import cv2
+from ffpyplayer.player import MediaPlayer
+import tkinter as tk
+from PIL import Image, ImageTk
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -204,7 +209,63 @@ class ToggleApp:
     def close_gemini_chat_window(self):
         if self.gemini_chat_window_instance is not None:
             self.gemini_chat_window_instance.destroy()
-            self.gemini_chat_window_instance = None 
+            self.gemini_chat_window_instance = None
+
+
+class VideoPlayerWithAudio:
+    def __init__(self, video_path):
+        self.video_path = video_path
+        self.player = MediaPlayer(video_path)
+        self.cap = cv2.VideoCapture(video_path)
+
+        self.root = root
+        self.root.title("Video Player with Audio")
+
+        self.video_label = tk.Label(self.root)
+        self.video_label.pack()
+
+        self.close_button = tk.Button(self.root, text="Close", command=self.stop)
+        self.close_button.pack()
+
+        self.running = True
+
+    def start(self):
+        self.update_frame()
+        self.root.protocol("WM_DELETE_WINDOW", self.stop)
+        self.root.mainloop()
+
+    def stop(self):
+        self.running = False
+        self.cap.release()
+        self.player.close_player()
+        self.root.destroy()
+
+    def update_frame(self):
+        if not self.running:
+            return
+
+        ret, frame = self.cap.read()
+        if ret:
+        
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image = Image.fromarray(frame)
+            imgtk = ImageTk.PhotoImage(image=image)
+            self.imgtk = ImageTk.PhotoImage(image=image)
+            self.video_label.configure(image=self.imgtk)
+
+        else:
+            self.stop()
+            return
+
+        audio_frame, _ = self.player.get_frame()
+
+        self.root.after(10, self.update_frame)
+
+def play_video(video_path):
+    player = VideoPlayerWithAudio(video_path)
+    player.start()
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
