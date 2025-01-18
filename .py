@@ -6,6 +6,8 @@ import cv2
 from ffpyplayer.player import MediaPlayer
 import tkinter as tk
 from PIL import Image, ImageTk
+import keyboard as kb
+import threading
 from dotenv import load_dotenv
 
 
@@ -79,15 +81,23 @@ class ToggleApp:
                 else:
                     self.close_gemini_chat_window()
 
+            if item_name == "rickroll trolling": 
+                if new_status == "ON":
+                    monitor_key_and_trigger(callback=lambda: play_video("rickroll.mp4"))
+                else:
+                    stop_monitoring()   
+                return
+
     def get_status(self, item_name):
         return self.items.get(item_name, {}).get("status", None)
 
     def infinite_windows(self):
         if self.infinite_windows_active:
             new_window = tk.Toplevel(self.root)
+            new_window.attributes("-topmost", True)
             self.open_windows.append(new_window)
             new_window.title("ERROR")
-
+        
             new_window.protocol("WM_DELETE_WINDOW", lambda: self.on_window_close(new_window))
 
     def on_window_close(self, closed_window):
@@ -213,7 +223,7 @@ class ToggleApp:
 
 
 class VideoPlayerWithAudio:
-    def __init__(self, video_path):
+    def __init__(self, video_path, root):
         self.video_path = video_path
         self.player = MediaPlayer(video_path)
         self.cap = cv2.VideoCapture(video_path)
@@ -262,10 +272,38 @@ class VideoPlayerWithAudio:
         self.root.after(10, self.update_frame)
 
 def play_video(video_path):
-    player = VideoPlayerWithAudio(video_path)
+    new_window = tk.Toplevel()
+    new_window.attributes("-topmost", True)
+    player = VideoPlayerWithAudio(video_path, new_window)
     player.start()
 
+def monitor_key_and_trigger(callback=None):
+    def key_listener():
+        target_sequence = "rickroll"
+        buffer = ""
 
+        try:
+            while monitor_key_and_trigger.running:
+                event = kb.read_event()
+                if event.event_type == "down":
+                    key = event.name.lower()
+                    buffer += key
+                    if len(buffer) > len(target_sequence):
+                        buffer = buffer[-len(target_sequence):]
+
+                    if target_sequence in buffer:
+                        buffer = ""
+                        if callback:
+                            root.after(0, callback) 
+        except Exception as e:
+            print(f"鍵盤監控出錯：{e}")
+
+    monitor_key_and_trigger.running = True
+    listener_thread = threading.Thread(target=key_listener, daemon=True)
+    listener_thread.start()
+
+def stop_monitoring():
+    monitor_key_and_trigger.running = False
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -275,5 +313,6 @@ if __name__ == "__main__":
     app.create_item("black screen")
     app.create_item("count files")
     app.create_item("gemini chat")
+    app.create_item("rickroll trolling")
 
     root.mainloop()
