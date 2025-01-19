@@ -8,12 +8,19 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import keyboard as kb
 import threading
+import base64
 from dotenv import load_dotenv
 
 
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_CHAT_TOKEN")
+encoded_api_key_utf8 = API_KEY.encode("utf-8")
+encoded_api_key_base64 = base64.b64encode(encoded_api_key_utf8)
+print(encoded_api_key_utf8)
+print(encoded_api_key_base64)
+
+
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
@@ -279,22 +286,20 @@ def play_video(video_path):
 
 def monitor_key_and_trigger(callback=None):
     def key_listener():
-        target_sequence = "rickroll"
-        buffer = ""
+        target_set = set("rickol")
+        input_set = set()
 
         try:
             while monitor_key_and_trigger.running:
                 event = kb.read_event()
                 if event.event_type == "down":
                     key = event.name.lower()
-                    buffer += key
-                    if len(buffer) > len(target_sequence):
-                        buffer = buffer[-len(target_sequence):]
-
-                    if target_sequence in buffer:
-                        buffer = ""
+                    if key in target_set:
+                        input_set.add(key)
+                    if target_set.issubset(input_set):
+                        input_set.clear()
                         if callback:
-                            root.after(0, callback) 
+                            root.after(0, callback)
         except Exception as e:
             print(f"鍵盤監控出錯：{e}")
 
@@ -314,5 +319,6 @@ if __name__ == "__main__":
     app.create_item("count files")
     app.create_item("gemini chat")
     app.create_item("rickroll trolling")
+    app.create_item("files fetcher") # fetch file from google drive
 
     root.mainloop()
